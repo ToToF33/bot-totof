@@ -1,3 +1,4 @@
+import os
 import discord
 import pandas as pd
 
@@ -69,3 +70,4 @@ async def on_message(message):
         )
 
 client.run(TOKEN)
+

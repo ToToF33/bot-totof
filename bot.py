@@ -1,3 +1,4 @@
+import requests
 import os
 import discord
 import pandas as pd
@@ -19,6 +20,26 @@ def format_money(copper):
 def load_data():
     return pd.read_csv(SHEET_URL)
 
+OCR_KEY = os.getenv("OCR_API_KEY")
+
+def ocr_image(path):
+    with open(path, "rb") as f:
+        r = requests.post(
+            "https://api.ocr.space/parse/image",
+            files={"filename": f},
+            data={
+                "apikey": OCR_KEY,
+                "language": "eng"
+            }
+        )
+
+    result = r.json()
+
+    if result.get("IsErroredOnProcessing"):
+        return "❌ Erreur OCR."
+
+    return result["ParsedResults"][0]["ParsedText"]
+
 @client.event
 async def on_ready():
     print("✅ Bot connecté et prêt !")
@@ -26,6 +47,26 @@ async def on_ready():
 @client.event
 async def on_message(message):
     if message.author == client.user:
+        return
+
+    # ✅ Commande OCR : !ocr + image jointe
+    if message.content.startswith("!ocr"):
+
+        if len(message.attachments) == 0:
+            await message.channel.send("❌ Envoie une image avec la commande !ocr")
+            return
+
+        attachment = message.attachments[0]
+
+        # Sauvegarder l’image envoyée
+        await attachment.save("image.png")
+
+        await message.channel.send("🔍 Lecture OCR en cours...")
+
+        # OCR
+        text = ocr_image("image.png")
+
+        await message.channel.send(f"📷 Texte détecté :\n```{text}```")
         return
 
     if message.content.startswith("!pur"):
@@ -70,4 +111,3 @@ async def on_message(message):
         )
 
 client.run(TOKEN)
-
